@@ -164,6 +164,49 @@ main{padding:0}
 .btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font:500 13px var(--body);cursor:pointer}
 .btn.sm{padding:2px 8px;font-size:12px}
 .loading{color:var(--muted);font-size:14px}
+/* Compact first screen: the rewrite box should be visible without scrolling on a laptop */
+header{padding:10px 0 0}
+.bar{gap:12px}
+.bar .modes{margin:0}
+.bar .modes button{font-size:13.5px;padding:6px 12px}
+.hero{display:block;padding:12px 0 0}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:10px}
+.hero h1{font:800 30px/1.1 var(--display);letter-spacing:-.025em;margin:0 0 4px;max-width:none}
+.hero .lede{font-size:14.5px;margin:0;max-width:none}
+.proof{display:flex;gap:22px;padding:0;border:0;max-width:none;flex:none}
+.proof li{font-size:12.5px;max-width:17ch;line-height:1.25}
+.proof b{font-size:20px}
+.composer{padding:12px 14px}
+.comp-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end}
+.composer textarea{min-height:84px;height:84px}
+.composer > .samples{margin:8px 0 0}
+.comp-side .go-row{flex-direction:column;align-items:stretch;gap:8px}
+.comp-side .samples{margin:0 0 10px}
+.comp-foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px}
+.comp-foot #areadmsg{margin:0;font-size:13px}
+.comp-foot{flex-wrap:nowrap}
+.comp-foot #areadmsg{flex:0 1 auto;min-width:0}
+.comp-foot .chips{margin:0;display:flex;flex:1 1 auto;flex-wrap:wrap;gap:6px}
+.amend-top{flex-wrap:nowrap;align-items:center}
+.amend-top .go{flex:none}
+@media (max-width:900px){.comp-foot{flex-wrap:wrap}.amend-top{flex-wrap:wrap}}
+.results{margin:12px 0}
+.big{font-size:60px;margin:4px 0 2px}
+.range{margin:2px 0 0;font-size:14px}
+.gauge{margin:8px 0 4px}
+.odds-card .steps{margin-top:10px}
+.muse-card .ai-out .headline{font-size:18px;margin:2px 0 6px}
+.muse-card .ai-out{font-size:14px;line-height:1.45}
+.muse-card .ai-out li{margin:1px 0}
+.muse-card .ai-out .unseen{margin-top:8px}
+.muse-card .ai-out .unseen b{font-weight:600}
+.muse-card .ai-out p{margin:4px 0}
+.muse-card .ai-cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+.muse-card .ai-out h3{margin:8px 0 2px;font-size:13.5px}
+.muse-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.muse-foot .trace{margin:0}
+.ghost.sm{padding:5px 11px;font-size:13px;border-radius:9px}
+@media (max-width:900px){.hero-top{flex-direction:column;align-items:flex-start}.comp-main{grid-template-columns:1fr}.muse-card .ai-cols{grid-template-columns:1fr}}
 [hidden]{display:none!important}
 @media (max-width:900px){.hero,.results,.grid2,.grid3,.layout{grid-template-columns:1fr}.hero{padding-top:26px;gap:24px}.flow{grid-template-columns:1fr 1fr}.inputs-body{grid-template-columns:1fr}}
 @media (max-width:560px){.wrap{padding:0 16px}.vs{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.big{font-size:76px}nav{margin-left:0}.card{padding:18px}.steps{grid-template-columns:96px 1fr 40px}}
@@ -173,11 +216,11 @@ main{padding:0}
 <body>
 <header><div class="wrap bar">
 <a class="mark" href="index.html"><i aria-hidden="true"></i>Billcast</a>
-<span class="powered"><i aria-hidden="true"></i><span>Runs on <b>Muse Spark 1.3</b> through the Meta Model API</span></span>
+<span class="powered" title="Muse Spark 1.3 through the Meta Model API"><i aria-hidden="true"></i><span>Runs on <b>Muse Spark 1.3</b></span></span>
+<div class="modes" role="tablist"><button id="m-draft" role="tab" aria-selected="true">Score a bill</button><button id="m-track" role="tab" aria-selected="false">Track a filed bill</button></div>
 <nav></nav>
 </div></header>
 <main><div class="wrap">
-<div class="modes" role="tablist"><button id="m-draft" role="tab" aria-selected="true">Score a bill</button><button id="m-track" role="tab" aria-selected="false">Track a filed bill</button></div>
 <section id="track" hidden>
 <div class="note" id="tnote"></div>
 <div class="layout">
@@ -195,52 +238,52 @@ main{padding:0}
 </section>
 <section id="draft">
 <div class="hero">
- <div>
-  <h1>Paste a California bill. See if it becomes law.</h1>
-  <p class="lede">Muse Spark reads the bill. A model trained on every bill since 2007 scores its odds at each step to the Governor's desk. Then Muse Spark explains the number and drafts a version that could pass.</p>
+ <div class="hero-top">
+  <div>
+   <h1>Paste a California bill. See if it becomes law.</h1>
+   <p class="lede">Muse Spark reads it, a model trained on 19 years of bills scores it, and Muse Spark explains and improves it.</p>
+  </div>
   <ul class="proof">
-   <li><b><span id="aucpct"></span></b>of the time it ranks a signed bill above a failed one, on a session it never saw</li>
-   <li><b>19 years</b>of committee votes, floor votes and vetoes</li>
-   <li><b>3</b>jobs for Muse Spark: read, explain, rewrite</li>
+   <li><b><span id="aucpct"></span></b>ranked right on a session it never saw</li>
+   <li><b>19 years</b>of votes and vetoes</li>
+   <li><b>3</b>Muse Spark jobs</li>
   </ul>
  </div>
  <div class="ring composer">
-  <label for="dg">The bill <span class="hint">Paste its Legislative Counsel's Digest, or describe it in a few sentences</span></label>
-  <textarea id="dg" placeholder="Existing law requires… This bill would…"></textarea>
-  <div class="samples" id="samples"><span>Or try one:</span></div>
-  <div class="go-row">
-   <button class="go" id="aread" type="button"><span class="spin" aria-hidden="true"></span><span class="lbl">Read it with Muse Spark</span></button>
-   <button class="ghost" id="reset" type="button">Clear</button>
+  <div class="comp-main">
+   <textarea id="dg" aria-label="The bill: paste its Legislative Counsel's Digest, or describe it in a few sentences" placeholder="Paste the bill's Legislative Counsel's Digest, or describe it in a few sentences: Existing law requires… This bill would…"></textarea>
+   <div class="comp-side">
+    <div class="go-row">
+     <button class="go" id="aread" type="button"><span class="spin" aria-hidden="true"></span><span class="lbl">Read it with Muse Spark</span></button>
+     <button class="ghost" id="reset" type="button">Clear</button>
+    </div>
+   </div>
   </div>
-  <div id="areadmsg" aria-live="polite">Muse Spark fills in the subject, committee and fiscal flags, then explains the odds.</div>
-  <div class="chips" id="aread-ev"></div>
+  <div class="samples" id="samples"><span>Or try one:</span></div>
+  <div class="comp-foot"><span id="areadmsg" aria-live="polite">Muse Spark fills in the subject, committee and fiscal flags, then explains the odds.</span><span class="chips" id="aread-ev"></span></div>
  </div>
 </div>
 
 <div class="results">
- <div class="card" aria-live="polite">
-  <h2>Chance of being signed</h2>
-  <p class="sub">From the statistical model, not the language model</p>
+ <div class="card odds-card" aria-live="polite">
+  <h2>Chance of being signed<span class="who">statistical model</span></h2>
   <div><span class="big" id="p"></span><span class="band" id="band"></span></div>
   <div class="range" id="range"></div>
   <div class="gauge"><div class="rng" id="grng"></div><div class="fill" id="gfill"></div><div class="base" id="gbase" title="Average bill"></div></div>
-  <div class="small">Dark bar: this bill. Blue band: likely range. Blue line: the average bill in <span id="baselabel"></span> (<span id="basepct"></span> signed).</div>
-  <h2 style="margin-top:14px;font-size:17px">Step by step</h2>
-  <p class="sub">Chance of clearing each step for a bill that reaches it. The weakest step is in violet.</p>
-  <div class="steps" id="steps"></div>
+  <div class="small">Band: likely range. Line: average bill in <span id="baselabel"></span> (<span id="basepct"></span>).</div>
+  <div class="steps" id="steps" aria-label="Chance of clearing each step; the weakest is in violet"></div>
  </div>
  <div class="ring card muse-card">
   <h2>In plain English<span class="who">written by Muse Spark</span></h2>
   <div class="ai-out" id="aout"><div class="empty">Paste a bill or pick a sample above. Muse Spark will explain what drives the odds, where bills like this stall, and what would help.</div></div>
-  <div class="go-row" style="margin-top:14px"><button class="ghost" id="aexp" type="button">Explain again</button></div>
-  <div class="trace" id="trace" hidden></div>
+  <div class="muse-foot"><div class="trace" id="trace" hidden></div><button class="ghost sm" id="aexp" type="button">Explain again</button></div>
  </div>
 </div>
 
 <div class="ring card amend">
  <div class="amend-top">
   <div><h2>Rewrite it to pass<span class="who">drafted by Muse Spark, scored by the model</span></h2>
-  <p class="sub" style="max-width:62ch">Muse Spark amends the bill to address its weakest steps, like a staffer would before a hearing. The model then scores the new version, so the gain is measured, not claimed.</p></div>
+  <p class="sub">Muse Spark amends the bill for its weakest steps, like a staffer before a hearing. The model scores each draft, so the gain is measured, not claimed.</p></div>
   <button class="go" id="amend" type="button"><span class="spin" aria-hidden="true"></span><span class="lbl">Draft a stronger version</span></button>
  </div>
  <div id="amout"></div>
@@ -640,9 +683,9 @@ async function readBill() {
     if (r.policy_area && areas.includes(r.policy_area)) $("area").value = r.policy_area;
     for (const k of FLAGS) if (typeof r[k] === "boolean") $(k).checked = r[k];
     const ev = r.evidence && typeof r.evidence === "object" ? Object.entries(r.evidence) : [];
-    $("aread-ev").innerHTML = `<span><b>${esc(r.subject || $("kw").value)}</b></span><span>Committee: <b>${esc((r.policy_area || "pick one below").replace(/^(Assembly|Senate) /, "$1 "))}</b></span>` +
-      ev.map(([k, v]) => `<span title="${esc(String(v))}">${esc(LABEL[k] || k)}: “${esc(String(v).slice(0, 48))}”</span>`).join("");
-    msg.innerHTML = `${traceText(r, "Read")}. Check the inputs below; you can change any of them.`;
+    $("aread-ev").innerHTML = `<span><b>${esc(r.subject || $("kw").value)}</b></span><span><b>${esc(r.policy_area || "Pick a committee below")}</b></span>` +
+      ev.map(([k, v]) => `<span title="From the digest: “${esc(String(v))}”">${esc(LABEL[k] || k)} ✓</span>`).join("");
+    msg.innerHTML = `<span title="${r.usage ? `${r.usage.input} tokens in, ${r.usage.output} out. ` : ""}Hover a flag to see the phrase it came from.">Read by ${esc(r.model || "Muse Spark")} in ${(r._ms / 1000).toFixed(1)}s:</span>`;
     similar(); render();
     busy(b, false, "Read it with Muse Spark");
     await explain();
@@ -671,9 +714,8 @@ async function explain() {
   try {
     const r = await museCall({mode: "explain", ...oddsForAI()});
     out.innerHTML = (r.headline ? `<div class="headline">${esc(r.headline)}</div>` : "") + (r.why ? `<p>${esc(r.why)}</p>` : "") +
-      (r.risks && r.risks.length ? `<h3>Where bills like this stall</h3>${list(r.risks)}` : "") +
-      (r.improve && r.improve.length ? `<h3>What could raise the odds</h3>${list(r.improve)}` : "") +
-      (r.unseen ? `<h3>What the model can't see</h3><p>${esc(r.unseen)}</p>` : "");
+      `<div class="ai-cols"><div>${r.risks && r.risks.length ? `<h3>Where bills like this stall</h3>${list(r.risks)}` : ""}</div><div>${r.improve && r.improve.length ? `<h3>What could raise the odds</h3>${list(r.improve)}` : ""}</div></div>` +
+      (r.unseen ? `<p class="unseen"><b>What the model can't see:</b> ${esc(r.unseen)}</p>` : "");
     $("trace").innerHTML = traceText(r, "Written"); $("trace").hidden = false;
   } catch (e) { out.innerHTML = `<div class="empty ai-err">${esc(e.message)}</div>`; }
   busy(b, false, "Explain again");
