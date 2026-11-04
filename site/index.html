@@ -695,32 +695,77 @@ function mini(sp, ref) {
   return `<div class="ministeps">${STEPS.map((k, i) => { const d = ref ? sp[i] - ref[i] : 0;
     return `<span>${esc(M.stage_names[k])}</span><b>${pc(sp[i])}${ref && Math.abs(d) >= 0.005 ? ` <span style="color:var(--${d > 0 ? "gain" : "loss"})">${d > 0 ? "+" : "−"}${Math.abs(100 * d).toFixed(0)}</span>` : ""}</b>`; }).join("")}</div>`;
 }
-$("amend").addEventListener("click", async () => {
-  const b = $("amend"), out = $("amout");
-  if (!$("dg").value.trim()) { out.innerHTML = `<div class="empty">Paste a bill or pick a sample at the top first.</div>`; return; }
-  if (!LAST) return;
-  busy(b, true, "Drafting amendments…"); out.innerHTML = `<div class="vs"><div>${skeleton(5)}</div><div>${skeleton(5)}</div></div>`;
-  try {
-    await loadText();
-    const before = {p: LAST.p, sp: LAST.sp, subject: $("kw").value, digest: $("dg").value};
-    const r = await museCall({mode: "amend", ...oddsForAI()});
-    const after = scoreVersion(r.subject || before.subject, r.digest || "", r);
-    AMENDED = r;
-    const d = after.p - before.p;
-    out.innerHTML = `<div class="vs">
+// Which words in a text push the text model's score down or up (the same TF-IDF terms textScore uses)
+function textTerms(str, n = 8) {
+  const t = (str || "").toLowerCase().match(/\b[a-z][a-z]+\b/g) || [];
+  if (!TXT || !t.length) return {drag: [], lift: []};
+  const c = {};
+  for (const g of [...t, ...t.slice(1).map((w, i) => t[i] + " " + w)]) if (g in TIX) c[g] = (c[g] || 0) + 1;
+  const v = Object.entries(c).map(([g, k]) => [g, (1 + Math.log(k)) * TXT.idf[TIX[g]]]);
+  const norm = Math.hypot(...v.map(x => x[1])) || 1;
+  const contrib = v.map(([g, x]) => [g, TXT.coef[TIX[g]] * x / norm]).sort((x, y) => x[1] - y[1]);
+  return {drag: contrib.filter(x => x[1] < 0).slice(0, n).map(x => x[0]), lift: contrib.filter(x => x[1] > 0).slice(-n).reverse().map(x => x[0])};
+}
+function draftSummary(d, sc, before) {
+  return {strategy: d.strategy, subject: d.subject, changes: d.changes, chance_signed: pc(sc.p), versus_original: `${sc.p >= before.p ? "+" : "-"}${Math.abs(100 * (sc.p - before.p)).toFixed(1)} pts`,
+    steps: STEPS.map((k, i) => `${M.stage_names[k]}: ${pc(sc.sp[i])} (${sc.sp[i] >= before.sp[i] ? "+" : "-"}${Math.abs(100 * (sc.sp[i] - before.sp[i])).toFixed(1)})`),
+    drag_terms: textTerms(d.subject + " " + d.digest, 6).drag};
+}
+let DRAFTS = [];
+function showDraft(i, before, meta) {
+  const r = DRAFTS[i], after = r._sc, d = after.p - before.p;
+  AMENDED = r;
+  const others = DRAFTS.map((x, j) => j === i ? "" : `<button class="ghost" data-draft="${j}" type="button" style="padding:6px 12px;font-size:13px">${esc(x.strategy || "Draft " + (j + 1))}: ${pc(x._sc.p)}</button>`).join("");
+  $("amout").innerHTML = `<div class="vs">
       <div><h3>As introduced</h3><div class="num">${pc(before.p)}</div><div class="subj">${esc(before.subject)}</div>${mini(before.sp)}</div>
-      <div style="border-color:var(--violet)"><h3>Muse Spark's amended version</h3><div class="num">${pc(after.p)}<small class="${d >= 0 ? "up" : "dn"}">${d >= 0 ? "+" : "−"}${Math.abs(100 * d).toFixed(0)} pts</small></div><div class="subj">${esc(r.subject || "")}</div>${mini(after.sp, before.sp)}</div>
+      <div style="border-color:var(--violet)"><h3>Muse Spark's best draft${r.strategy ? `: ${esc(r.strategy)}` : ""}</h3><div class="num">${pc(after.p)}<small class="up">+${(100 * d).toFixed(1)} pts</small></div><div class="subj">${esc(r.subject || "")}</div>${mini(after.sp, before.sp)}</div>
     </div>
+    ${others ? `<div class="go-row" style="margin-top:12px"><span class="small">Other drafts that also raised the odds:</span>${others}</div>` : ""}
     <div class="grid2" style="margin-top:16px">
       <div><h3 style="font:600 14px var(--body);margin:0 0 4px">What changed</h3><div class="ai-out">${list(r.changes)}</div>${r.tradeoff ? `<p class="small" style="margin-top:8px"><b>Trade-off:</b> ${esc(r.tradeoff)}</p>` : ""}</div>
       <div><h3 style="font:600 14px var(--body);margin:0 0 4px">Amended digest</h3><p class="small" style="color:var(--ink)">${esc(r.digest || "")}</p>
       <button class="ghost" id="useamend" type="button">Use this version</button></div>
     </div>
-    <div class="trace">${traceText(r, "Drafted")}. Re-scored in your browser by the statistical model.</div>`;
+    <div class="trace"><i aria-hidden="true"></i>${meta}</div>`;
+}
+$("amend").addEventListener("click", async () => {
+  const b = $("amend"), out = $("amout");
+  if (!$("dg").value.trim()) { out.innerHTML = `<div class="empty">Paste a bill or pick a sample at the top first.</div>`; return; }
+  if (!LAST) return;
+  busy(b, true, "Drafting amendments…"); out.innerHTML = `<p class="small" id="amstat">Muse Spark is drafting three versions…</p><div class="vs"><div>${skeleton(5)}</div><div>${skeleton(5)}</div></div>`;
+  try {
+    await loadText();
+    const before = {p: LAST.p, sp: LAST.sp, subject: $("kw").value, digest: $("dg").value};
+    const terms = textTerms(before.subject + " " + before.digest);
+    const base = oddsForAI();
+    // What the model does if each fiscal flag flips, so Muse Spark doesn't drop a flag the model rewards
+    const s0 = state();
+    base.odds.flag_effects = FLAGS.filter(k => k !== "spot_bill").map(k => { const d = P({...s0, [k]: s0[k] ? 0 : 1}) - LAST.p;
+      return `${s0[k] ? "Removing" : "Adding"} "${LABEL[k]}": ${d >= 0 ? "+" : "-"}${Math.abs(100 * d).toFixed(1)} pts`; });
+    let all = [], feedback, ms = 0, tokIn = 0, tokOut = 0, rounds = 0, model = "Muse Spark";
+    for (rounds = 1; rounds <= 3; rounds++) {
+      const r = await museCall({mode: "amend", v: 2, ...base, drag_terms: terms.drag, lift_terms: terms.lift, feedback});
+      ms += r._ms; model = r.model || model; if (r.usage) { tokIn += r.usage.input; tokOut += r.usage.output; }
+      const drafts = (r.drafts || []).filter(d => d && d.digest).map(d => ({...d, _sc: scoreVersion(d.subject || before.subject, d.digest, d)}));
+      all = all.concat(drafts);
+      if (all.some(d => d._sc.p > before.p + 0.001)) break;
+      feedback = all.map(d => draftSummary(d, d._sc, before));
+      const st = $("amstat"); if (st) st.textContent = `None of the first ${all.length} drafts beat the original. Sending the model's scores back to Muse Spark for another round…`;
+    }
+    DRAFTS = all.filter(d => d._sc.p > before.p + 0.001).sort((x, y) => y._sc.p - x._sc.p).slice(0, 3);
+    const meta = `${esc(model)} wrote ${all.length} drafts in ${rounds} round${rounds > 1 ? "s" : ""} (${(ms / 1000).toFixed(1)}s, ${tokIn.toLocaleString()} tokens in, ${tokOut.toLocaleString()} out). The statistical model scored each one in your browser; only drafts that raise the odds are shown.`;
+    if (!DRAFTS.length) {
+      const best = all.sort((x, y) => y._sc.p - x._sc.p)[0];
+      out.innerHTML = `<div class="empty"><b>No draft beat the original.</b> Muse Spark wrote ${all.length} amended versions and the model scored every one at or below ${pc(before.p)}${best ? ` (best: ${pc(best._sc.p)}, “${esc(best.strategy || "")}”)` : ""}. For this bill the inputs the model weighs most, like the committee, the author and the timing, matter more than the drafting. Try adding a coauthor from the other party or an earlier introduction date under Model inputs.</div><div class="trace"><i aria-hidden="true"></i>${meta}</div>`;
+    } else {
+      out._before = before; out._meta = meta; showDraft(0, before, meta);
+    }
   } catch (e) { out.innerHTML = `<div class="empty ai-err">${esc(e.message)}</div>`; }
-  busy(b, false, "Draft another version");
+  busy(b, false, "Draft more versions");
 });
 $("amout").addEventListener("click", e => {
+  const dj = e.target.closest("[data-draft]");
+  if (dj) { showDraft(+dj.dataset.draft, $("amout")._before, $("amout")._meta); return; }
   if (e.target.id !== "useamend" || !AMENDED) return;
   $("dg").value = AMENDED.digest || $("dg").value; $("kw").value = AMENDED.subject || $("kw").value;
   for (const k of FLAGS) if (typeof AMENDED[k] === "boolean") $(k).checked = AMENDED[k];
