@@ -28,6 +28,8 @@ Billcast adds two things a statistical model can't do on its own, both powered b
 - **Read a bill for you.** Paste a Legislative Counsel's Digest (or a few plain sentences) and Muse Spark fills in the form: subject line, first policy committee, and the fiscal flags from the digest key line, with the phrase it relied on for each flag.
 - **Explain the estimate.** Muse Spark gets the bill, the odds at each step, the inputs that move them most, and how similar past bills ended, then writes a plain-English read: why the bill scores where it does, where bills like it tend to stall, what drafting or strategy changes would raise the odds, and what the model can't see.
 
+- **Rewrite it to pass.** Muse Spark drafts an amended version of the bill aimed at its weakest steps (narrower scope, no new crime, no appropriation), and the statistical model re-scores the draft in the browser, so the page shows the measured change in odds at every step, side by side.
+
 The odds still come from the tested logistic model below. The language model reads and explains; it never sets the number. Calls go through a small server function (`supabase/functions/billcast`) so the API key never reaches the browser.
 
 ## The idea
