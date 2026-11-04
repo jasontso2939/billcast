@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Statewide Bill Trends · Billcast</title>
+<meta name="description" content="Where California bills die, what predicts it, and why the Governor vetoes. Every legislator since the 2007-08 session, from official bulk data.">
+<style>
+:root{--bg:#f6f7fa;--panel:#fff;--ink:#1b2333;--muted:#5d6678;--line:#dde1ea;--navy:#14213d;--gold:#f2a900;--d:#3a6ea5;--r:#b5483b;--hi:#fff4d6}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1521;--panel:#171f2f;--ink:#e8ecf4;--muted:#9aa4b8;--line:#2a3550;--navy:#e8ecf4;--hi:#3a3115;--d:#6f9fd4;--r:#d97a6c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:#14213d;color:#fff;padding:26px 16px 20px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}header .wrap{padding:0}
+h1{margin:0 0 6px;font:700 28px/1.2 Georgia,Cambria,serif}
+header p{margin:0;color:#c9d2e6;max-width:72ch}
+main{padding:18px 0 60px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.ctl label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:var(--panel);color:var(--ink);border:0;padding:7px 12px;font:500 14px system-ui,sans-serif;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--navy);color:var(--panel);font-weight:600}
+input[type=search]{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:500 14px system-ui,sans-serif;min-width:200px}
+nav{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+nav a{color:#c9d2e6;text-decoration:none;font-size:14px;padding:4px 10px;border:1px solid #33456b;border-radius:999px}
+nav a[aria-current=page]{background:#fff;color:#14213d;font-weight:600;border-color:#fff}
+footer{color:var(--muted);font-size:13px;margin-top:16px}
+a{color:var(--d)}
+.D{color:var(--d);font-weight:700}.R{color:var(--r);font-weight:700}
+.o-signed{color:#2f7d4f;font-weight:600}.o-vetoed{color:var(--r);font-weight:600}.o-not_enacted{color:var(--muted)}
+
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+section h2{margin:0 0 4px;font:700 19px/1.3 Georgia,Cambria,serif}
+section .lede{color:var(--muted);margin:0 0 12px;font-size:14px;max-width:80ch}
+.bars{display:grid;grid-template-columns:minmax(120px,300px) 1fr 64px;gap:6px 10px;align-items:center;font-size:14px}
+.bars .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars .track{background:var(--bg);border-radius:4px;height:16px;position:relative}
+.bars .fill{height:100%;border-radius:4px;background:#8a96ad}
+.bars .fill.D{background:var(--d)}.bars .fill.R{background:var(--r)}.bars .fill.bad{background:#c0703a}
+.bars .val{text-align:right;font-variant-numeric:tabular-nums}
+.bars .grp{grid-column:1/-1;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}.bars{grid-template-columns:minmax(90px,140px) 1fr 52px}}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.toc a{font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px;text-decoration:none}
+[hidden]{display:none!important}
+.grid2>div,.layout>div{min-width:0}
+</style>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<header><div class="wrap">
+<h1>Statewide Bill Trends</h1>
+<p>Where bills die, what goes with success, and why the Governor vetoes. Every legislator, <span id="range"></span>. Budget bills are excluded.</p>
+<nav></nav>
+</div></header>
+<main><div class="wrap">
+<div class="note">These are descriptive patterns, not causes. A bill with more coauthors may pass more often because it was a stronger bill to begin with. Each figure counts regular Assembly and Senate bills by a legislator (not committee bills); see the methodology in the repository for exact rules.</div>
+<div class="controls" style="display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+ <div><label for="sess" style="display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Session</label>
+ <select id="sess" style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:500 14px system-ui,sans-serif"></select></div>
+</div>
+<div class="tools"><button class="btn" id="share">Copy link</button></div>
+<div class="toc" id="toc"></div>
+<section id="over"><h2>Session by session</h2><p class="lede">Each two-year session side by side. 2019-20 stands out: the 2020 pandemic cut the legislative calendar and far fewer bills were signed.</p><div class="tools"><button class="btn sm" id="overcsv">CSV</button></div><div id="overbody"></div></section>
+<div id="out"></div>
+<footer>Not affiliated with any office or legislator.<br>Source: California Legislative Information bulk export (leginfo), including the Governor's veto messages. Pipeline, tests and methodology are in the repository.</footer>
+</div></main>
+<script src="common.js"></script>
+<script src="insights.js"></script>
+<script>
+CL.nav("trends.html");
+let T;
+const KEYS = Object.keys(INSIGHTS.trends).filter(k => /^\d{4}$/.test(k)).sort().reverse();
+const FIRST = CL.label(KEYS[KEYS.length - 1]), LAST = CL.label(KEYS[0]);
+document.getElementById("range").textContent = `${FIRST} through ${LAST}`;
+const lab = k => k === "all" ? `All sessions (${FIRST} to ${LAST})` : CL.label(k);
+document.getElementById("sess").innerHTML = ["all", ...KEYS].map(k => `<option value="${k}">${lab(k)}</option>`).join("");
+const DEF = {s: "all"}, ST = CL.readState(DEF);
+if (!["all", ...KEYS].includes(ST.s)) ST.s = "all";
+document.getElementById("sess").value = ST.s;
+const esc = CL.esc;
+const CSV = {};
+const pct = v => v == null ? "–" : v.toFixed(1) + "%";
+const PN = {D:"Democrats", R:"Republicans"};
+function bars(rows, opt = {}) {
+  const max = opt.max || Math.max(...rows.filter(r => !r.grp).map(r => r.v), 1);
+  return '<div class="bars">' + rows.map(r => r.grp ? `<div class="grp">${esc(r.grp)}</div>` :
+    `<div class="lbl" title="${esc(r.title || r.l)}">${esc(r.l)}</div><div class="track"><div class="fill ${r.c || ""}" style="width:${100 * r.v / max}%"></div></div><div class="val">${r.txt ?? pct(r.v)}</div>`).join("") + "</div>";
+}
+function table(cols, rows) {
+  return "<div style='overflow:auto'><table><thead><tr>" + cols.map(c => `<th>${c[1]}</th>`).join("") + "</tr></thead><tbody>" +
+    rows.map(r => "<tr>" + cols.map(c => `<td>${c[2] ? c[2](r[c[0]], r) : esc(r[c[0]])}</td>`).join("") + "</tr>").join("") + "</tbody></table></div>";
+}
+let S = [];
+function draw(key) {
+T = INSIGHTS.trends[key]; S = [];
+function sec(id, title, lede, body, data) {
+  if (data) CSV[id] = data;
+  S.push(`<section id="${id}"><h2>${esc(title)}</h2><p class="lede">${lede}</p>${data ? `<div class="tools"><button class="btn sm" data-csv="${id}">CSV</button></div>` : ""}${body}</section>`);
+}
+
+// 1. Appropriations by party
+{
+  const r = [];
+  for (const c of ["Assembly Appropriations", "Senate Appropriations"]) for (const st of ["House of origin", "Second house"]) {
+    r.push({grp: `${c}, ${st.toLowerCase()}`});
+    for (const x of T.appropriations_by_party.filter(x => x.committee === c && x.stage === st))
+      r.push({l: `${PN[x.party]} (${x.died} of ${x.sent})`, v: x.pct_died, c: x.party});
+  }
+  sec("approps", "Appropriations: share of referred bills that died there", "Bills referred to each Appropriations committee that ended the session still there (held on suspense or never taken up), split by the author's party and by whether the bill started in that house.", bars(r), T.appropriations_by_party);
+}
+// 2. Where failed bills died
+{
+  const r = [];
+  for (const p of ["D", "R"]) { r.push({grp: PN[p] + ": bills that did not become law (excluding vetoes)"});
+    for (const x of T.where_failed_bills_died.filter(x => x.party === p)) r.push({l: `${x.where} (${x.bills})`, v: x.pct, c: p}); }
+  sec("where", "Where failed bills died", "Of bills that were neither signed nor vetoed, where they stopped.", bars(r, {max: 100}), T.where_failed_bills_died);
+}
+// 3. Policy committee risk
+sec("areas", "Policy committees whose bills most often die in Appropriations",
+  "Grouped by each bill's first policy committee, among bills that reached an Appropriations committee. Committees with at least 25 such bills.",
+  (T.policy_area_risk.length > 20 ? '<p class="lede">The 20 highest shown; the full table is below.</p>' : "") +
+  bars(T.policy_area_risk.slice(0, 20).map(x => ({l: x.policy_area, v: x.pct_died, c: "bad", txt: `${pct(x.pct_died)}`, title: `${x.policy_area}: ${x.died} of ${x.sent} died, ${pct(x.pct_signed)} signed`})), {max: 100}) +
+  "<details style='margin-top:10px'><summary>Full table</summary>" + table([["policy_area","Policy committee"],["sent","Bills"],["died","Died in Approps"],["pct_died","% died",pct],["pct_signed","% signed",pct]], T.policy_area_risk) + "</details>", T.policy_area_risk);
+// 4. Fiscal flags
+{
+  const r = [];
+  for (const f of [...new Set(T.fiscal_flags.map(x => x.flag))]) { r.push({grp: f});
+    for (const x of T.fiscal_flags.filter(x => x.flag === f)) r.push({l: `${x.has_flag ? "Yes" : "No"} (${x.bills} bills)`, v: x.pct_signed}); }
+  sec("fiscal", "Fiscal features and the chance of being signed", "Flags from the Legislative Counsel's digest on each bill's latest version, among bills sent to Appropriations. Bars show the share signed.", bars(r, {max: 100}), T.fiscal_flags);
+}
+// 5. Coalition
+{
+  const c = T.coalition, r = [{grp: "By number of coauthors"}];
+  for (const x of c.by_coauthors) r.push({l: `${x.coauthors} coauthors (${x.bills})`, v: x.pct_signed});
+  for (const p of ["D", "R"]) { r.push({grp: `${PN[p]}: has a coauthor from the other party`});
+    for (const x of c.cross_party.filter(x => x.party === p)) r.push({l: `${x.has_other_party_coauthor ? "Yes" : "No"} (${x.bills})`, v: x.pct_signed, c: p}); }
+  const r2 = [];
+  for (const p of ["D", "R"]) { r2.push({grp: PN[p]});
+    for (const x of c.lead_structure.filter(x => x.party === p)) r2.push({l: `${x.structure} (${x.bills})`, v: x.pct_signed, c: p}); }
+  sec("coalition", "Coauthors and lead authors", "Share signed, by coalition on the bill's latest version. Small groups (under about 30 bills) move a lot with a few outcomes.",
+    `<div class="grid2"><div>${bars(r, {max: 100})}</div><div>${bars(r2, {max: 100})}</div></div>`,
+    [...c.by_coauthors.map(x => ({table: "by_coauthors", ...x})), ...c.cross_party.map(x => ({table: "cross_party", ...x})), ...c.lead_structure.map(x => ({table: "lead_structure", ...x}))]);
+}
+// 6. Timing
+{
+  const order = ["early (Dec-Jan)", "Feb 1-14", "Feb 15-deadline"], r = [];
+  const yrs = [...new Set(T.timing.map(t => t.filed_year))].sort();
+  if (yrs.length > 2) {
+    r.push({grp: "All years combined"});
+    for (const w of order) { const xs = T.timing.filter(t => t.filing_window === w), n = xs.reduce((a, t) => a + t.bills, 0), sgn = xs.reduce((a, t) => a + t.signed, 0);
+      if (n) r.push({l: `${w} (${n})`, v: 100 * sgn / n}); }
+  } else for (const y of yrs) { r.push({grp: `Introduced in ${y}`});
+    for (const w of order) { const x = T.timing.find(t => t.filed_year === y && t.filing_window === w); if (x) r.push({l: `${w} (${x.bills})`, v: x.pct_signed}); } }
+  sec("timing", "When bills are introduced", "Share signed by introduction window: December and January, the first half of February, or the last two weeks before the introduction deadline.", bars(r, {max: 100}), T.timing);
+}
+// 7. Second house + spot bills
+{
+  const r = T.second_house.map(x => ({passed: x.passed, ...x}));
+  const sb = []; for (const p of ["D", "R"]) { sb.push({grp: PN[p]});
+    for (const x of T.spot_bills.filter(x => x.party === p)) sb.push({l: `${x.spot_bill ? "Spot bill at introduction" : "Substantive at introduction"} (${x.bills})`, v: x.pct_signed, c: p}); }
+  sec("second", "After passing the house of origin", "Outcomes for bills that cleared their first house. Spot bills are introduced with only a statement of intent (short text containing \"intent of the Legislature to enact\").",
+    `<div class="grid2"><div>${table([["passed","Passed"],["bills","Bills"],["pct_signed","Signed",pct],["pct_vetoed","Vetoed",pct],["pct_died_other_appr","Died in other Approps",pct],["pct_died_other_elsewhere","Died elsewhere",pct]], r)}</div><div>${bars(sb, {max: 100})}</div></div>`,
+    [...T.second_house.map(x => ({table: "second_house", ...x})), ...T.spot_bills.map(x => ({table: "spot_bills", ...x}))]);
+}
+// 8. Vetoes
+{
+  const v = T.veto_reasons, rv = v.review || {};
+  const rr = v.summary.map(x => ({l: x.reason, v: x.primary, txt: String(x.primary)}));
+  const gap = v.vetoed_bills - v.messages;
+  const check = rv.reviewed ? ` To check the rules, ${rv.reviewed} messages from this view were read in full and labeled by hand; the keyword label matched ${rv.agree} (${CL.pct(rv.agree, rv.reviewed)})${rv.held_out_reviewed ? `, and ${rv.held_out_agree} of ${rv.held_out_reviewed} (${CL.pct(rv.held_out_agree, rv.held_out_reviewed)}) in a sample read after the rules were final` : ""}. Cost and duplication labels are the most reliable; the line between a specific objection and general disagreement is a judgment call, so both count as one reason here.` : "";
+  sec("vetoes", "Vetoes: which policy areas and why",
+    `${v.messages} veto messages${gap > 0 ? ` (the export has no message yet for ${gap} of the ${v.vetoed_bills} vetoed bills)` : ""}, each classified by its main stated reason using keyword rules (an approximation; read the message for any single bill).${check} ${v.repeat.length} messages say the Governor vetoed a similar bill before${v.repeat.length <= 12 ? ": " + v.repeat.map(x => esc(x.bill_id)).join(", ") : ""}.`,
+    `<div class="grid2"><div><div class="lede"><b>Main stated reason</b> (number of messages)</div>${bars(rr)}</div><div><div class="lede"><b>Veto rate by policy committee</b> (bills reaching the Governor, at least 20)</div>${bars(T.veto_rate_by_area.slice(0, 12).map(x => ({l: x.policy_area, v: x.pct_vetoed, c: "bad", title: `${x.vetoed} of ${x.sent} vetoed`})))}</div></div>`,
+    [...v.summary.map(x => ({table: "veto_reasons", ...x})), ...T.veto_rate_by_area.map(x => ({table: "veto_rate_by_area", ...x}))]);
+}
+document.getElementById("out").innerHTML = S.join("");
+document.getElementById("toc").innerHTML = [...document.querySelectorAll("section")].map(s => `<a href="#${s.id}">${esc(s.querySelector("h2").textContent.split(":")[0])}</a>`).join("");
+}
+// Ten-year overview (independent of the session picker)
+{
+  const O = INSIGHTS.trends.over_time;
+  const t = (cols) => "<div style='overflow:auto'><table><thead><tr><th>Session</th>" + cols.map(c => `<th>${c[1]}</th>`).join("") + "</tr></thead><tbody>" +
+    O.map(o => "<tr><td>" + o.label + (o.complete === false ? " <span class='small'>(in progress)</span>" : "") + "</td>" + cols.map(c => `<td>${c[2] ? c[2](o[c[0]]) : o[c[0]]}</td>`).join("") + "</tr>").join("") + "</tbody></table></div>";
+  const P = v => v == null ? "–" : v.toFixed(1) + "%";
+  document.getElementById("overbody").innerHTML = t([["bills","Bills"],["signed_pct","Signed",P],["signed_pct_D","Signed, D authors",P],["signed_pct_R","Signed, R authors",P],["vetoed_pct_of_sent","Vetoed (of bills sent)",P],
+    ["died_Assembly_appr_pct_D","Died in Asm Approps, D",P],["died_Assembly_appr_pct_R","Died in Asm Approps, R",P],["died_Senate_appr_pct_D","Died in Sen Approps, D",P],["died_Senate_appr_pct_R","Died in Sen Approps, R",P]]) +
+    "<p class='lede' style='margin-top:8px'>Appropriations columns: share of bills sent to that committee (in either house) that ended the session there.</p>";
+}
+function allKeys(rows) { const k = []; for (const r of rows) for (const x of Object.keys(r)) if (!k.includes(x)) k.push(x); return k; }
+document.getElementById("out").addEventListener("click", e => {
+  const b = e.target.closest("[data-csv]"); if (!b) return;
+  const rows = CSV[b.dataset.csv].map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === "object" && v ? JSON.stringify(v) : v])));
+  CL.csv(`ca-trends-${b.dataset.csv}-${ST.s === "all" ? "all-sessions" : CL.label(ST.s)}.csv`, rows, allKeys(rows));
+});
+document.getElementById("overcsv").addEventListener("click", () => CL.csv("ca-trends-by-session.csv", INSIGHTS.trends.over_time, allKeys(INSIGHTS.trends.over_time)));
+CL.shareButton(document.getElementById("share"));
+const sel = document.getElementById("sess");
+sel.addEventListener("input", e => { ST.s = e.target.value; CL.writeState(ST, DEF); draw(ST.s); });
+draw(ST.s);
+if (location.hash) { const el = document.querySelector(location.hash); if (el) el.scrollIntoView(); }
+</script>
+</body>
+</html>
