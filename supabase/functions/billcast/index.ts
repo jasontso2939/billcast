@@ -7,9 +7,10 @@
 //   Reads a Legislative Counsel's Digest and fills in the outlook form.
 // POST {mode: "explain", bill: {...}, odds: {...}}
 //   Explains the model's estimate in plain English and suggests what would raise it.
-// POST {mode: "amend", bill: {...}, odds: {...}}
-//   Drafts an amended version of the bill aimed at its weakest steps. The page
-//   re-scores the draft with the statistical model, so the gain is measured, not claimed.
+// POST {mode: "amend", bill, odds, drag_terms, lift_terms, feedback?}
+//   Drafts three amended versions aimed at the weakest steps. The page scores each with
+//   the statistical model, sends the scores back as feedback for a second round if none
+//   beat the original, and only ever shows drafts that raise the odds.
 
 const API = "https://api.meta.ai/v1/chat/completions";
 const MODEL = Deno.env.get("META_MODEL") ?? "muse-spark-1.3";
@@ -54,18 +55,35 @@ Return JSON with:
 - "unseen": one sentence on what the model cannot see that matters most for this bill.
 Plain sentences, no markdown, no em dashes. Return only the JSON object.`;
 
-const AMEND_PROMPT = `You are an experienced California legislative staffer amending a bill to improve its chance of being signed.
-You get the bill's subject and digest, the model's estimate, each step's chance, and the inputs that move the estimate most.
-Write a realistic amended version that keeps the bill's core purpose but addresses its weakest steps. Typical moves: narrow scope, phase in or pilot, drop or cap new penalties, remove an appropriation, avoid creating a new crime (which makes a state-mandated local program), make it subject to appropriation, add a sunset.
-Return JSON with:
-- "subject": the amended subject line in Legislative Counsel style.
-- "digest": the amended Legislative Counsel's Digest, 2 to 5 sentences, ending with an updated key line in the form "Vote: majority. Appropriation: no. Fiscal committee: yes. State-mandated local program: no."
-- "fiscal_committee", "appropriation", "local_program", "taxlevy", "urgency", "supermajority", "spot_bill": true or false for the amended bill.
-- "changes": up to 4 short items, each one amendment and the step it helps.
-- "tradeoff": one sentence on what the bill gives up.
+const AMEND_PROMPT = `You are an experienced California legislative staffer amending a bill so it is more likely to be signed.
+You get the bill, the model's estimate, each step's chance, the inputs that move the estimate most, and "drag_terms" and "lift_terms": words and phrases in the current digest that the model's text reader scores as lowering or raising the odds.
+A statistical model will score every draft you write. Only drafts that score higher than the original are shown, so aim for real improvement.
+
+Write 3 different amended drafts, each using a different strategy, for example:
+- narrow the scope or make it a pilot or phase-in,
+- remove the cost driver (appropriation, new penalty or new crime, new state program) so it avoids a fiscal referral or a state-mandated local program,
+- restructure as reporting, guidance or a sunset-limited program.
+Rules:
+- Keep the bill's core purpose. Each change must be a real policy amendment a committee would accept, not word games.
+- Change only the sentences you amend. Keep every other sentence of the digest word for word, because rewording unchanged parts moves the score at random.
+- Prefer removing or softening the drag_terms' underlying provisions over adding new provisions.
+- odds.flag_effects says exactly what the model does when each fiscal flag flips. Follow it, even when it surprises you: if removing a flag lowers the odds, keep that provision.
+- Do not add a new appropriation, penalty, crime, tax, urgency clause or two-thirds vote.
+- Each digest ends with an updated key line in the form "Vote: majority. Appropriation: no. Fiscal committee: yes. State-mandated local program: no."
+If "feedback" is present, it lists your earlier drafts with the model's score for each and how each step moved. Learn from it: keep what raised a step, drop what lowered one, and write 3 new drafts that beat the original.
+
+Return JSON: {"drafts": [ {"strategy": short name, "subject": amended subject line, "digest": amended digest,
+"fiscal_committee", "appropriation", "local_program", "taxlevy", "urgency", "supermajority", "spot_bill": true or false for the amended bill,
+"changes": up to 3 short items, each one amendment and the step it helps, "tradeoff": one sentence on what the bill gives up} ]}
 Plain sentences, no markdown, no em dashes. Return only the JSON object.`;
 
-async function muse(system: string, user: unknown, key: string) {
+// The single-draft prompt the previous page version uses, kept until that page is replaced.
+const AMEND_PROMPT_V1 = `You are an experienced California legislative staffer amending a bill to improve its chance of being signed.
+Write a realistic amended version that keeps the bill's core purpose but addresses its weakest steps.
+Return JSON with "subject", "digest" (ending with an updated key line like "Vote: majority. Appropriation: no. Fiscal committee: yes. State-mandated local program: no."), the booleans "fiscal_committee", "appropriation", "local_program", "taxlevy", "urgency", "supermajority", "spot_bill", "changes" (up to 4 short items) and "tradeoff" (one sentence).
+Plain sentences, no markdown, no em dashes. Return only the JSON object.`;
+
+async function muse(system: string, user: unknown, key: string, maxTokens = 1500) {
   const r = await fetch(API, {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
@@ -77,7 +95,7 @@ async function muse(system: string, user: unknown, key: string) {
       ],
       response_format: { type: "json_object" },
       reasoning_effort: "low",
-      max_completion_tokens: 1500,
+      max_completion_tokens: maxTokens,
     }),
   });
   const body = await r.text();
@@ -121,11 +139,19 @@ Deno.serve(async (req) => {
       }, key);
       return json({ model: MODEL, ...out });
     }
+    if (b.mode === "amend" && b.v !== 2) {
+      const out = await muse(AMEND_PROMPT_V1, { bill: b.bill, odds: b.odds }, key);
+      return json({ model: MODEL, ...out });
+    }
     if (b.mode === "amend") {
       const out = await muse(AMEND_PROMPT, {
         bill: { ...b.bill, digest: clip(b.bill?.digest), subject: clip(b.bill?.subject, 200) },
         odds: b.odds,
-      }, key);
+        drag_terms: Array.isArray(b.drag_terms) ? b.drag_terms.slice(0, 12) : [],
+        lift_terms: Array.isArray(b.lift_terms) ? b.lift_terms.slice(0, 12) : [],
+        feedback: Array.isArray(b.feedback) ? b.feedback.slice(0, 6) : undefined,
+      }, key, 3500);
+      out.drafts = Array.isArray(out.drafts) ? out.drafts.slice(0, 3) : [];
       return json({ model: MODEL, ...out });
     }
     return json({ error: "mode must be read, explain or amend" }, 400);
