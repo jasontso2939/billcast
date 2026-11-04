@@ -7,6 +7,9 @@
 //   Reads a Legislative Counsel's Digest and fills in the outlook form.
 // POST {mode: "explain", bill: {...}, odds: {...}}
 //   Explains the model's estimate in plain English and suggests what would raise it.
+// POST {mode: "amend", bill: {...}, odds: {...}}
+//   Drafts an amended version of the bill aimed at its weakest steps. The page
+//   re-scores the draft with the statistical model, so the gain is measured, not claimed.
 
 const API = "https://api.meta.ai/v1/chat/completions";
 const MODEL = Deno.env.get("META_MODEL") ?? "muse-spark-1.3";
@@ -51,6 +54,17 @@ Return JSON with:
 - "unseen": one sentence on what the model cannot see that matters most for this bill.
 Plain sentences, no markdown, no em dashes. Return only the JSON object.`;
 
+const AMEND_PROMPT = `You are an experienced California legislative staffer amending a bill to improve its chance of being signed.
+You get the bill's subject and digest, the model's estimate, each step's chance, and the inputs that move the estimate most.
+Write a realistic amended version that keeps the bill's core purpose but addresses its weakest steps. Typical moves: narrow scope, phase in or pilot, drop or cap new penalties, remove an appropriation, avoid creating a new crime (which makes a state-mandated local program), make it subject to appropriation, add a sunset.
+Return JSON with:
+- "subject": the amended subject line in Legislative Counsel style.
+- "digest": the amended Legislative Counsel's Digest, 2 to 5 sentences, ending with an updated key line in the form "Vote: majority. Appropriation: no. Fiscal committee: yes. State-mandated local program: no."
+- "fiscal_committee", "appropriation", "local_program", "taxlevy", "urgency", "supermajority", "spot_bill": true or false for the amended bill.
+- "changes": up to 4 short items, each one amendment and the step it helps.
+- "tradeoff": one sentence on what the bill gives up.
+Plain sentences, no markdown, no em dashes. Return only the JSON object.`;
+
 async function muse(system: string, user: unknown, key: string) {
   const r = await fetch(API, {
     method: "POST",
@@ -63,15 +77,18 @@ async function muse(system: string, user: unknown, key: string) {
       ],
       response_format: { type: "json_object" },
       reasoning_effort: "low",
-      max_completion_tokens: 1200,
+      max_completion_tokens: 1500,
     }),
   });
   const body = await r.text();
   if (!r.ok) throw new Error(`Model API ${r.status}: ${body.slice(0, 300)}`);
-  const text = JSON.parse(body).choices?.[0]?.message?.content ?? "";
+  const res = JSON.parse(body);
+  const text = res.choices?.[0]?.message?.content ?? "";
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("Model returned no JSON");
-  return JSON.parse(m[0]);
+  const out = JSON.parse(m[0]);
+  out.usage = res.usage ? { input: res.usage.prompt_tokens, output: res.usage.completion_tokens } : null;
+  return out;
 }
 
 Deno.serve(async (req) => {
@@ -104,7 +121,14 @@ Deno.serve(async (req) => {
       }, key);
       return json({ model: MODEL, ...out });
     }
-    return json({ error: "mode must be read or explain" }, 400);
+    if (b.mode === "amend") {
+      const out = await muse(AMEND_PROMPT, {
+        bill: { ...b.bill, digest: clip(b.bill?.digest), subject: clip(b.bill?.subject, 200) },
+        odds: b.odds,
+      }, key);
+      return json({ model: MODEL, ...out });
+    }
+    return json({ error: "mode must be read, explain or amend" }, 400);
   } catch (e) {
     return json({ error: String((e as Error).message ?? e) }, 502);
   }

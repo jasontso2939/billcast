@@ -1,3 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Onest:wght@400;500;600&display=swap");
+/* Billcast look on the data pages: same type, navy and Muse gradient as the home page */
+body{font-family:"Onest",ui-sans-serif,system-ui,sans-serif}
+header{background:#0F1E45!important;border-bottom:3px solid transparent;border-image:linear-gradient(90deg,#0866FF,#8A3FFC,#EE4B87) 1}
+h1,h2,.panel h2{font-family:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif!important;letter-spacing:-.015em}
+header h1{font-weight:800!important}
+nav a.brand{color:#fff!important;border-color:transparent!important;background:linear-gradient(120deg,#0866FF,#8A3FFC,#EE4B87)}
 /* Shared by every page: tool buttons (CSV, copy link) and phone layout. */
 .tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:500 13px system-ui,sans-serif;cursor:pointer;text-decoration:none;display:inline-block}
